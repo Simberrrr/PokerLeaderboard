@@ -101,19 +101,22 @@ pub async fn create_player(
 
 async fn add_game(
     State(pool): State<PgPool>,
-    Json(payload): Json<CreatePlayer>,
+    Json(payload): Json<CreateGameRequest>,
 ) -> Result<Json<CreateGameResponse>,String>{
-    let game_id = create_game(&pool)
+    let results = create_game(&pool, payload)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(Json(CreateGameResponse { id: (1) }))
+
+
+    Ok(Json(results))
 }
 
 async fn create_game(
     pool: &PgPool,
+    payload: CreateGameRequest,
 ) -> Result<CreateGameResponse, sqlx::Error> {
-    sqlx::query_as!(
-        CreateGameResponse,
+    // 1. Insert game
+    let game = sqlx::query!(
         r#"
         INSERT INTO games (played_at)
         VALUES (NOW())
@@ -121,9 +124,50 @@ async fn create_game(
         "#
     )
     .fetch_one(pool)
-    .await
+    .await?;
+    let game_id= game.id;
+    // 2. Loop through every player in payload.results
+    for player in payload.results {
+        insert_player_result(
+            pool,
+            game_id,
+            player.player_id,
+            player.buy_in,
+            player.cash_out,
+        )
+        .await?;
+    }
+
+    // 3. Return the game id
+    Ok(CreateGameResponse{id:game_id})
 }
 
+async fn insert_player_result(
+    pool: &PgPool,
+    game_id: i32,
+    player_id: i32,
+    buy_in: i32,
+    cash_out: i32,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        INSERT INTO player_results (
+            game_id,
+            player_id,
+            buy_in,
+            cash_out
+        )
+        VALUES ($1, $2, $3, $4)
+        "#,
+        game_id,
+        player_id,
+        buy_in,
+        cash_out,
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
 
 
 #[tokio::main]
@@ -143,6 +187,7 @@ async fn main() {
         .route("/", get(health_check))
         .route("/leaderboard", get(leaderboard))
         .route("/player", post(add_player))
+        .route("/game", post(add_game))
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
