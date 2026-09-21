@@ -121,12 +121,21 @@ async fn leaderboard(
 async fn add_player(
     State(pool): State<PgPool>,
     Json(payload): Json<CreatePlayer>,
-) -> Result<Json<Player>, String> {
+) -> Result<Json<Player>, (StatusCode, String)> {
     let player = create_player(&pool, payload.name)
         .await
         .map_err(|e| {
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.code().as_deref() == Some("23505") {
+                    tracing::info!("POST /player failed: duplicate name");
+                    return (
+                        StatusCode::CONFLICT,
+                        "A player with this name already exists".to_string(),
+                    );
+                }
+            }
             tracing::error!(error = %e, "POST /player failed");
-            e.to_string()
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
 
     tracing::info!(player_id = player.id, "POST /player succeeded");
