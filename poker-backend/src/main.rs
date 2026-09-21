@@ -104,7 +104,7 @@ async fn leaderboard(
         FROM players p
         LEFT JOIN player_results pr ON pr.player_id = p.id
         GROUP BY p.id, p.name
-        ORDER BY SUM(pr.cash_out - pr.buy_in) DESC
+        ORDER BY COALESCE(SUM(pr.cash_out - pr.buy_in), 0) DESC
         "#
     )
     .fetch_all(&pool)
@@ -652,7 +652,7 @@ async fn main() {
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::predicate(|origin, _| {
             let o = origin.as_bytes();
-            o == b"http://localhost:3000"
+            o == b"http://localhost:3000" || o == b"https://poker-leaderboard-weld.vercel.app"
         }))
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS,])
         .allow_headers(Any);
@@ -672,11 +672,16 @@ async fn main() {
         .layer(cors)
         .with_state(pool);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001")
+    let port = env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(3001);
+
+    let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
         .await
         .unwrap();
 
-    println!("Listening on port 3001");
+    println!("Listening on port {port}");
 
     axum::serve(listener, app).await.unwrap();
 }
