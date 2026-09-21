@@ -37,10 +37,11 @@ export default function NewGamePage() {
   const [selections, setSelections] = React.useState<Record<number, Selection>>(
     {},
   )
+  const [defaultBuyIn, setDefaultBuyIn] = React.useState(String(DEFAULT_BUY_IN))
   const [submitting, setSubmitting] = React.useState(false)
 
   function getSelection(id: number): Selection {
-    return selections[id] ?? { selected: false, buyIn: String(DEFAULT_BUY_IN) }
+    return selections[id] ?? { selected: false, buyIn: defaultBuyIn }
   }
 
   function toggle(id: number, selected: boolean) {
@@ -55,6 +56,16 @@ export default function NewGamePage() {
       ...prev,
       [id]: { ...getSelection(id), buyIn },
     }))
+  }
+
+  function applyDefaultToAll() {
+    setSelections((prev) => {
+      const next = { ...prev }
+      for (const player of data ?? []) {
+        next[player.id] = { ...getSelection(player.id), buyIn: defaultBuyIn }
+      }
+      return next
+    })
   }
 
   const chosen = (data ?? []).filter((p) => getSelection(p.id).selected)
@@ -121,6 +132,35 @@ export default function NewGamePage() {
         </EmptyState>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <Label htmlFor="default-buy-in" className="text-sm font-medium">
+                Default buy-in
+              </Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">$</span>
+                <Input
+                  id="default-buy-in"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  value={defaultBuyIn}
+                  onChange={(e) => setDefaultBuyIn(e.target.value)}
+                  className="w-24 tabular-nums"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={applyDefaultToAll}
+              >
+                Apply to all
+              </Button>
+            </CardContent>
+          </Card>
+
           <div className="flex flex-col gap-2">
             {data.map((player) => {
               const sel = getSelection(player.id)
