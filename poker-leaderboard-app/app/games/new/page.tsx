@@ -82,12 +82,12 @@ export default function NewGamePage() {
     }
 
     const results = chosen.map((p) => {
-      const buyIn = Math.round(Number(getSelection(p.id).buyIn))
+      const buyIn = Math.round(Number(getSelection(p.id).buyIn) * 100) / 100
       return { player_id: p.id, buy_in: buyIn, cash_out: 0 }
     })
 
     if (results.some((r) => !Number.isFinite(r.buy_in) || r.buy_in < 0)) {
-      toast.error("Buy-ins must be zero or a positive whole number.")
+      toast.error("Buy-ins must be zero or a positive amount.")
       return
     }
 
@@ -142,9 +142,9 @@ export default function NewGamePage() {
                 <Input
                   id="default-buy-in"
                   type="number"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   min={0}
-                  step={1}
+                  step={0.01}
                   value={defaultBuyIn}
                   onChange={(e) => setDefaultBuyIn(e.target.value)}
                   className="w-24 tabular-nums"
@@ -192,9 +192,9 @@ export default function NewGamePage() {
                       </span>
                       <Input
                         type="number"
-                        inputMode="numeric"
+                        inputMode="decimal"
                         min={0}
-                        step={1}
+                        step={0.01}
                         value={sel.buyIn}
                         disabled={!sel.selected}
                         onChange={(e) => setBuyIn(player.id, e.target.value)}

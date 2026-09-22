@@ -14,6 +14,6 @@ CREATE TABLE games (
 CREATE TABLE player_results (
     game_id INT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
     player_id INT NOT NULL REFERENCES players(id),
-    buy_in INT NOT NULL,
-    cash_out INT NOT NULL
+    buy_in NUMERIC(10, 2) NOT NULL,
+    cash_out NUMERIC(10, 2) NOT NULL
 );

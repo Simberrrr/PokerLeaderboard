@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, FromRow};
 use sqlx::postgres::PgPoolOptions;
 use chrono::NaiveDateTime;
+use rust_decimal::Decimal;
 use dotenvy::dotenv;
 use std::env;
 use tower_http::cors::{CorsLayer, AllowOrigin,Any};
@@ -20,7 +21,7 @@ pub struct Player {
 struct PlayerStats {
     id: i32,
     name: String,
-    profit: i64,
+    profit: Decimal,
     games: i64,
 }
 
@@ -37,8 +38,8 @@ struct CreateGameRequest {
 #[derive(Deserialize)]
 struct CreatePlayerResult {
     player_id: i32,
-    buy_in: i32,
-    cash_out: i32,
+    buy_in: Decimal,
+    cash_out: Decimal,
 }
 
 #[derive(Deserialize)]
@@ -56,8 +57,8 @@ struct CreateGameResponse {
 struct GamePlayerResult {
     player_id: i32,
     player_name: String,
-    buy_in: i32,
-    cash_out: i32,
+    buy_in: Decimal,
+    cash_out: Decimal,
 }
 
 #[derive(Serialize)]
@@ -71,19 +72,19 @@ struct GameSummary {
 struct PlayerDetail {
     id: i32,
     name: String,
-    profit: i64,
+    profit: Decimal,
     games: usize,
     game_ids: Vec<i32>,
 }
 
 #[derive(Deserialize)]
 struct AddBuyInRequest {
-    amount: i32,
+    amount: Decimal,
 }
 
 #[derive(Deserialize)]
 struct SetCashOutRequest {
-    amount: i32,
+    amount: Decimal,
 }
 
 async fn health_check() -> &'static str {
@@ -99,7 +100,7 @@ async fn leaderboard(
         SELECT
             p.id,
             p.name,
-            COALESCE(SUM(pr.cash_out - pr.buy_in), 0) AS "profit!: i64",
+            COALESCE(SUM(pr.cash_out - pr.buy_in), 0) AS "profit!: Decimal",
             COUNT(DISTINCT pr.game_id)::bigint          AS "games!: i64"
         FROM players p
         LEFT JOIN player_results pr ON pr.player_id = p.id
@@ -173,7 +174,7 @@ async fn get_player(
         SELECT
             p.id,
             p.name,
-            COALESCE(SUM(pr.cash_out - pr.buy_in), 0) AS "profit!: i64",
+            COALESCE(SUM(pr.cash_out - pr.buy_in), 0) AS "profit!: Decimal",
             COALESCE(
                 ARRAY_AGG(pr.game_id) FILTER (WHERE pr.game_id IS NOT NULL),
                 '{}'
@@ -278,8 +279,8 @@ async fn insert_player_result(
     tx: &mut sqlx::PgConnection,
     game_id: i32,
     player_id: i32,
-    buy_in: i32,
-    cash_out: i32,
+    buy_in: Decimal,
+    cash_out: Decimal,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -554,8 +555,8 @@ async fn add_buy_in(
     tracing::info!(
         game_id,
         player_id,
-        amount = payload.amount,
-        new_buy_in = updated.buy_in,
+        amount = %payload.amount,
+        new_buy_in = %updated.buy_in,
         "PATCH /games/{{game_id}}/players/{{player_id}}/buy-in succeeded"
     );
 
@@ -600,7 +601,7 @@ async fn set_cash_out(
     tracing::info!(
         game_id,
         player_id,
-        cash_out = updated.cash_out,
+        cash_out = %updated.cash_out,
         "PATCH /game/{{game_id}}/players/{{player_id}}/cash-out succeeded"
     );
 

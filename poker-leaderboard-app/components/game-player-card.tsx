@@ -22,15 +22,21 @@ export function GamePlayerCard({
   onUpdated: () => void
 }) {
   const [rebuy, setRebuy] = React.useState("")
+  const [rebuySign, setRebuySign] = React.useState<1 | -1>(1)
   const [cashOut, setCashOutValue] = React.useState("")
   const [pending, setPending] = React.useState<"rebuy" | "cashout" | null>(null)
 
   const net = result.cash_out - result.buy_in
 
   async function handleRebuy() {
-    const amount = Math.round(Number(rebuy))
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Enter a positive rebuy amount.")
+    const magnitude = Math.round(Number(rebuy) * 100) / 100
+    if (!Number.isFinite(magnitude) || magnitude <= 0) {
+      toast.error("Enter an amount to adjust the buy-in.")
+      return
+    }
+    const amount = magnitude * rebuySign
+    if (result.buy_in + amount < 0) {
+      toast.error("Buy-in can't go below zero.")
       return
     }
     setPending("rebuy")
@@ -46,7 +52,7 @@ export function GamePlayerCard({
   }
 
   async function handleCashOut() {
-    const amount = Math.round(Number(cashOut))
+    const amount = Math.round(Number(cashOut) * 100) / 100
     if (cashOut.trim() === "" || !Number.isFinite(amount) || amount < 0) {
       toast.error("Enter a cash-out amount of zero or more.")
       return
@@ -91,12 +97,22 @@ export function GamePlayerCard({
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="flex flex-1 items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={rebuySign === 1 ? "Switch to decrease" : "Switch to increase"}
+              onClick={() => setRebuySign((s) => (s === 1 ? -1 : 1))}
+              disabled={pending !== null}
+            >
+              {rebuySign === 1 ? <PlusIcon /> : <MinusIcon />}
+            </Button>
             <Input
               type="number"
-              inputMode="numeric"
-              min={1}
-              step={1}
-              placeholder="Rebuy amount"
+              inputMode="decimal"
+              min={0}
+              step={0.01}
+              placeholder="Adjust buy-in"
               value={rebuy}
               onChange={(e) => setRebuy(e.target.value)}
               className="tabular-nums"
@@ -106,21 +122,17 @@ export function GamePlayerCard({
               onClick={handleRebuy}
               disabled={pending !== null}
             >
-              {pending === "rebuy" ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <PlusIcon data-icon="inline-start" />
-              )}
-              Rebuy
+              {pending === "rebuy" ? <Spinner data-icon="inline-start" /> : null}
+              Adjust
             </Button>
           </div>
 
           <div className="flex flex-1 items-center gap-2">
             <Input
               type="number"
-              inputMode="numeric"
+              inputMode="decimal"
               min={0}
-              step={1}
+              step={0.01}
               placeholder="Cash-out total"
               value={cashOut}
               onChange={(e) => setCashOutValue(e.target.value)}

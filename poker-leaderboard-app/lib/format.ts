@@ -1,11 +1,17 @@
 export function formatMoney(amount: number): string {
   const sign = amount < 0 ? "-" : ""
-  return `${sign}$${Math.abs(amount).toLocaleString("en-US")}`
+  return `${sign}$${Math.abs(amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
 }
 
 export function formatSignedMoney(amount: number): string {
   const sign = amount > 0 ? "+" : amount < 0 ? "-" : ""
-  return `${sign}$${Math.abs(amount).toLocaleString("en-US")}`
+  return `${sign}$${Math.abs(amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
 }
 
 export function profitClass(amount: number): string {

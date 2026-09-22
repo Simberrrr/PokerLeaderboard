@@ -16,6 +16,8 @@ sqlx = { version = "0.8", features = [
     "runtime-tokio-rustls",
     "postgres",
     "macros",
-    "chrono"
+    "chrono",
+    "rust_decimal"
 ] }
+rust_decimal = { version = "1", features = ["serde-float"] }
 dotenvy = "0.15"
